@@ -8,6 +8,7 @@ pub struct Command {
     pub input_redirect: Option<String>,
     pub output_redirect: Option<String>,
     pub append: bool,
+    #[allow(dead_code)]
     pub background: bool,
 }
 
@@ -134,6 +135,7 @@ pub fn parse_command(input: &str) -> Result<Vec<Command>, String> {
 }
 
 /// Get the standard input/output configuration for a command
+#[allow(dead_code)]
 pub fn get_stdio_config(cmd: &Command) -> (Stdio, Stdio, Stdio) {
     let stdin = if cmd.input_redirect.is_some() {
         Stdio::piped()

@@ -16,7 +16,21 @@ A high-performance terminal shell built in Rust with multi-language script execu
 
 ## Installation
 
-### Build from Source
+### Option 1: Download Pre-built Binary (Recommended)
+
+Download the latest release from [GitHub Releases](https://github.com/yourusername/shell-t/releases):
+
+- **macOS**: `shell-t-macos-x64`
+- **Linux**: `shell-t-linux-x64`
+- **Windows**: `shell-t-windows-x64.exe`
+
+```bash
+# Make executable and move to PATH (macOS/Linux)
+chmod +x shell-t-macos-x64  # or shell-t-linux-x64
+sudo mv shell-t-macos-x64 /usr/local/bin/shell-t
+```
+
+### Option 2: Build from Source
 
 ```bash
 # Prerequisites: Rust 1.70+
@@ -24,6 +38,40 @@ git clone <repository-url>
 cd shell-t
 cargo build --release
 ```
+
+## Releases
+
+### Creating a Release
+
+To create a downloadable release:
+
+1. **Local Build** (optional):
+
+   ```bash
+   ./build-release.sh
+   ```
+
+2. **GitHub Release**:
+
+   ```bash
+   git add .
+   git commit -m "Release version x.x.x"
+   git tag v1.0.0
+   git push origin main --tags
+   ```
+
+3. **Automated Build**: GitHub Actions will automatically:
+   - Build binaries for macOS, Linux, and Windows
+   - Create a GitHub release
+   - Upload binaries as release assets
+
+### Release Assets
+
+Each release includes:
+
+- `shell-t-macos-x64` - macOS Intel binary
+- `shell-t-linux-x64` - Linux x64 binary
+- `shell-t-windows-x64.exe` - Windows x64 executable
 
 ## Usage
 

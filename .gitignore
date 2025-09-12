@@ -1,1 +1,24 @@
 /target
+Cargo.lock
+
+# Built binaries
+shell-t-*
+*.exe
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE files
+.vscode/settings.json
+.idea/
+*.swp
+*.swo
+
+# Log files
+*.log

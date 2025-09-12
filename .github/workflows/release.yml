@@ -1,0 +1,72 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+jobs:
+  build:
+    name: Build for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            name: shell-t-linux-x64
+          - os: macos-latest
+            target: x86_64-apple-darwin
+            name: shell-t-macos-x64
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            name: shell-t-windows-x64.exe
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ matrix.target }}
+
+    - name: Build release
+      run: cargo build --release --target ${{ matrix.target }}
+
+    - name: Package binary
+      shell: bash
+      run: |
+        cd target/${{ matrix.target }}/release
+        if [ "${{ matrix.os }}" == "windows-latest" ]; then
+          cp shell-t.exe ${{ matrix.name }}
+        else
+          cp shell-t ${{ matrix.name }}
+          chmod +x ${{ matrix.name }}
+        fi
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ${{ matrix.name }}
+        path: target/${{ matrix.target }}/release/${{ matrix.name }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Create release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: artifacts/**/*
+        generate_release_notes: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
