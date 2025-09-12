@@ -90,6 +90,7 @@ exit                   # Exit shell
 ./script.rb           # Run Ruby script
 ./script.js           # Run JavaScript file
 
+
 # Pipelines and redirection
 ls | grep txt         # Pipeline
 echo "hello" > file.txt  # Output redirection
