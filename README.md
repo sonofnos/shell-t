@@ -18,7 +18,7 @@ A high-performance terminal shell built in Rust with multi-language script execu
 
 ### Option 1: Download Pre-built Binary (Recommended)
 
-Download the latest release from [GitHub Releases](https://github.com/yourusername/shell-t/releases):
+Download the latest release from [GitHub Releases](https://github.com/sonofnos/shell-t/releases):
 
 - **macOS**: `shell-t-macos-x64`
 - **Linux**: `shell-t-linux-x64`
