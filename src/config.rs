@@ -32,6 +32,7 @@ pub struct ResourceLimits {
     pub max_pipeline_length: usize,
     pub command_timeout: u64,
     pub max_memory_mb: usize,
+    pub max_arg_length: usize,
 }
 
 /// UI configuration
@@ -96,6 +97,7 @@ impl Default for ResourceLimits {
             max_pipeline_length: 10,
             command_timeout: 300, // 5 minutes
             max_memory_mb: 512,
+            max_arg_length: 1024,
         }
     }
 }

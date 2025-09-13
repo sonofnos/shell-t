@@ -115,16 +115,14 @@ impl CommandExecutor {
 
     /// Validate a command against security policies
     fn validate_command(&self, command: &str) -> ShellResult<()> {
-        if let Some(ref whitelist) = self.config.security.command_whitelist {
-            if !whitelist.contains(&command.to_string()) {
+        if !self.config.security.allowed_commands.is_empty() {
+            if !self.config.security.allowed_commands.contains(command) {
                 return Err(ShellError::SecurityViolation(format!("Command not in whitelist: {}", command)));
             }
         }
 
-        if let Some(ref blacklist) = self.config.security.command_blacklist {
-            if blacklist.contains(&command.to_string()) {
-                return Err(ShellError::SecurityViolation(format!("Command blacklisted: {}", command)));
-            }
+        if self.config.security.blocked_commands.contains(command) {
+            return Err(ShellError::SecurityViolation(format!("Command blacklisted: {}", command)));
         }
 
         Ok(())

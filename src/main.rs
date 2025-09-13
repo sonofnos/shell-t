@@ -2,19 +2,39 @@ use crossterm::style::{Color, Print, ResetColor, SetForegroundColor};
 use crossterm::ExecutableCommand;
 use std::io::{self, Write};
 use std::process::Command;
+use std::sync::Arc;
 
 mod parser;
+mod security;
+mod builtins;
+mod executor;
+mod ui;
+mod config;
+mod error;
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
+use error::ShellResult;
+
+fn main() -> ShellResult<()> {
     println!("Shell-T - Secure Multi-Language Terminal");
     println!("Type 'exit' to quit\n");
 
+    // Initialize configuration
+    let config = config::Config::default();
+
+    // Initialize security manager
+    let security = Arc::new(security::SecurityManager::new());
+
+    // Initialize managers
+    let builtin_manager = builtins::BuiltinManager::new(Arc::clone(&security), config.clone());
+    let executor = executor::CommandExecutor::new(Arc::clone(&security), config.clone());
+    let ui_manager = ui::UiManager::new(config.clone());
+
     loop {
-        io::stdout()
-            .execute(SetForegroundColor(Color::Green))?
-            .execute(Print("shell-t> "))?
-            .execute(ResetColor)?;
-        io::stdout().flush()?;
+        // Display prompt using UI manager
+        if let Err(e) = ui_manager.display_prompt() {
+            eprintln!("UI error: {}", e);
+            break;
+        }
 
         let mut input = String::new();
         io::stdin().read_line(&mut input)?;
@@ -31,7 +51,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
         match parser::parse_command(input) {
             Ok(commands) => {
-                if let Err(e) = execute_commands(&commands) {
+                if let Err(e) = execute_commands(&commands, &builtin_manager, &executor) {
                     eprintln!("Error: {}", e);
                 }
             }
@@ -44,60 +64,52 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
-fn execute_commands(commands: &[parser::Command]) -> Result<(), Box<dyn std::error::Error>> {
+fn execute_commands(
+    commands: &[parser::Command],
+    builtin_manager: &builtins::BuiltinManager,
+    executor: &executor::CommandExecutor,
+) -> ShellResult<()> {
     if commands.is_empty() {
         return Ok(());
     }
 
-    for cmd in commands {
+    // Handle single command (no pipeline)
+    if commands.len() == 1 {
+        let cmd = &commands[0];
         if cmd.program.is_empty() {
-            continue;
+            return Ok(());
         }
 
-        match cmd.program.as_str() {
-            "cd" => {
-                if let Some(dir) = cmd.args.first() {
-                    std::env::set_current_dir(dir)?;
+        // Try builtin commands first
+        if let Some(result) = builtin_manager.execute_builtin(&cmd.program, &cmd.args)? {
+            match result {
+                builtins::BuiltinResult::Success(msg) => {
+                    if let Some(msg) = msg {
+                        println!("{}", msg);
+                    }
                 }
-                continue;
+                builtins::BuiltinResult::Error(msg) => {
+                    eprintln!("{}", msg);
+                }
+                builtins::BuiltinResult::Info(msg) => {
+                    println!("{}", msg);
+                }
+                builtins::BuiltinResult::Warning(msg) => {
+                    eprintln!("Warning: {}", msg);
+                }
+                builtins::BuiltinResult::Exit => {
+                    std::process::exit(0);
+                }
             }
-            "pwd" => {
-                println!("{}", std::env::current_dir()?.display());
-                continue;
-            }
-            "exit" => {
-                std::process::exit(0);
-            }
-            _ => {}
+            return Ok(());
         }
 
-        let mut command = Command::new(&cmd.program);
-        command.args(&cmd.args);
-
-        if let Some(input_file) = &cmd.input_redirect {
-            let file = std::fs::File::open(input_file)?;
-            command.stdin(file);
-        }
-
-        if let Some(output_file) = &cmd.output_redirect {
-            let file = if cmd.append {
-                std::fs::OpenOptions::new()
-                    .create(true)
-                    .append(true)
-                    .open(output_file)?
-            } else {
-                std::fs::File::create(output_file)?
-            };
-            command.stdout(file);
-        }
-
-        let status = command.status()?;
-        if !status.success() {
-            eprintln!("Command failed with exit code: {}", status);
-        }
+        // Not a builtin, execute as external command
+        return executor.execute_pipeline(commands);
     }
 
-    Ok(())
+    // Handle pipeline
+    executor.execute_pipeline(commands)
 }
 
 #[cfg(test)]
@@ -105,11 +117,21 @@ mod tests {
     use super::*;
     use std::fs;
     use std::path::Path;
+    use std::sync::Arc;
+
+    fn create_test_managers() -> (builtins::BuiltinManager, executor::CommandExecutor) {
+        let config = config::Config::default();
+        let security = Arc::new(security::SecurityManager::new());
+        let builtin_manager = builtins::BuiltinManager::new(Arc::clone(&security), config.clone());
+        let executor = executor::CommandExecutor::new(security, config);
+        (builtin_manager, executor)
+    }
 
     #[test]
     fn test_execute_commands_empty() {
         let commands = Vec::new();
-        let result = execute_commands(&commands);
+        let (builtin_manager, executor) = create_test_managers();
+        let result = execute_commands(&commands, &builtin_manager, &executor);
         assert!(result.is_ok());
     }
 
@@ -126,7 +148,8 @@ mod tests {
             background: false,
         }];
 
-        let result = execute_commands(&commands);
+        let (builtin_manager, executor) = create_test_managers();
+        let result = execute_commands(&commands, &builtin_manager, &executor);
         assert!(result.is_ok());
 
         // Change back to original directory
@@ -159,7 +182,8 @@ mod tests {
             background: false,
         }];
 
-        let result = execute_commands(&commands);
+        let (builtin_manager, executor) = create_test_managers();
+        let result = execute_commands(&commands, &builtin_manager, &executor);
         assert!(result.is_ok());
     }
 
@@ -178,7 +202,8 @@ mod tests {
             background: false,
         }];
 
-        let result = execute_commands(&commands);
+        let (builtin_manager, executor) = create_test_managers();
+        let result = execute_commands(&commands, &builtin_manager, &executor);
         assert!(result.is_ok());
 
         // Clean up
@@ -196,7 +221,8 @@ mod tests {
             background: false,
         }];
 
-        let result = execute_commands(&commands);
+        let (builtin_manager, executor) = create_test_managers();
+        let result = execute_commands(&commands, &builtin_manager, &executor);
         assert!(result.is_ok());
 
         // Verify file was created
@@ -220,7 +246,8 @@ mod tests {
             background: false,
         }];
 
-        let result = execute_commands(&commands);
+        let (builtin_manager, executor) = create_test_managers();
+        let result = execute_commands(&commands, &builtin_manager, &executor);
         assert!(result.is_ok());
 
         // Verify content was appended
@@ -253,7 +280,8 @@ mod tests {
             },
         ];
 
-        let result = execute_commands(&commands);
+        let (builtin_manager, executor) = create_test_managers();
+        let result = execute_commands(&commands, &builtin_manager, &executor);
         assert!(result.is_ok());
     }
 
@@ -278,7 +306,8 @@ mod tests {
             },
         ];
 
-        let result = execute_commands(&commands);
+        let (builtin_manager, executor) = create_test_managers();
+        let result = execute_commands(&commands, &builtin_manager, &executor);
         assert!(result.is_ok());
     }
 
@@ -288,7 +317,8 @@ mod tests {
         let input = "echo hello world";
         let commands = parser::parse_command(input).unwrap();
 
-        let result = execute_commands(&commands);
+        let (builtin_manager, executor) = create_test_managers();
+        let result = execute_commands(&commands, &builtin_manager, &executor);
         assert!(result.is_ok());
     }
 
@@ -297,7 +327,8 @@ mod tests {
         let input = "echo test > output.txt";
         let commands = parser::parse_command(input).unwrap();
 
-        let result = execute_commands(&commands);
+        let (builtin_manager, executor) = create_test_managers();
+        let result = execute_commands(&commands, &builtin_manager, &executor);
         assert!(result.is_ok());
 
         // Verify file was created

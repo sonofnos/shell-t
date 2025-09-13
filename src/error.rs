@@ -29,7 +29,7 @@ impl fmt::Display for ShellError {
             ShellError::Io(err) => write!(f, "I/O error: {}", err),
             ShellError::CommandExecution(msg) => write!(f, "Command execution failed: {}", msg),
             ShellError::Parse(msg) => write!(f, "Parse error: {}", msg),
-            ShellError::Security(err) => write!(f, "Security error: {}", err),
+            ShellError::SecurityViolation(err) => write!(f, "Security error: {}", err),
             ShellError::Config(msg) => write!(f, "Configuration error: {}", msg),
             ShellError::FileSystem(msg) => write!(f, "File system error: {}", msg),
             ShellError::Process(msg) => write!(f, "Process error: {}", msg),
@@ -70,7 +70,7 @@ impl From<io::Error> for ShellError {
 
 impl From<SecurityError> for ShellError {
     fn from(err: SecurityError) -> Self {
-        ShellError::Security(err)
+        ShellError::SecurityViolation(err.to_string())
     }
 }
 
