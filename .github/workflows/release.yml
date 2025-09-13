@@ -7,20 +7,50 @@ on:
 
 jobs:
   build:
-    name: Build for ${{ matrix.os }}
+    name: Build for ${{ matrix.os }} (${{ matrix.target }})
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         include:
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
-            name: shell-t-linux-x64
+          # macOS builds
           - os: macos-latest
             target: x86_64-apple-darwin
             name: shell-t-macos-x64
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            name: shell-t-macos-arm64
+
+          # Linux GNU builds
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            name: shell-t-linux-x64-gnu
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            name: shell-t-linux-arm64-gnu
+            cross: true
+
+          # Linux musl builds (static linking)
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            name: shell-t-linux-x64-musl
+            cross: true
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-musl
+            name: shell-t-linux-arm64-musl
+            cross: true
+
+          # Windows MSVC builds
           - os: windows-latest
             target: x86_64-pc-windows-msvc
-            name: shell-t-windows-x64.exe
+            name: shell-t-windows-x64-msvc.exe
+          - os: windows-latest
+            target: aarch64-pc-windows-msvc
+            name: shell-t-windows-arm64-msvc.exe
+
+          # Windows GNU builds
+          - os: windows-latest
+            target: x86_64-pc-windows-gnu
+            name: shell-t-windows-x64-gnu.exe
 
     steps:
     - name: Checkout code
@@ -31,14 +61,23 @@ jobs:
       with:
         targets: ${{ matrix.target }}
 
-    - name: Build release
+    - name: Install cross (for cross-compilation)
+      if: matrix.cross == true
+      run: cargo install cross
+
+    - name: Build release (native)
+      if: matrix.cross != true
       run: cargo build --release --target ${{ matrix.target }}
+
+    - name: Build release (cross-compilation)
+      if: matrix.cross == true
+      run: cross build --release --target ${{ matrix.target }}
 
     - name: Package binary
       shell: bash
       run: |
         cd target/${{ matrix.target }}/release
-        if [ "${{ matrix.os }}" == "windows-latest" ]; then
+        if [[ "${{ matrix.name }}" == *.exe ]]; then
           cp shell-t.exe ${{ matrix.name }}
         else
           cp shell-t ${{ matrix.name }}

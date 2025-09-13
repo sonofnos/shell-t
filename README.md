@@ -20,14 +20,31 @@ A high-performance terminal shell built in Rust with multi-language script execu
 
 Download the latest release from [GitHub Releases](https://github.com/sonofnos/shell-t/releases):
 
-- **macOS**: `shell-t-macos-x64`
-- **Linux**: `shell-t-linux-x64`
-- **Windows**: `shell-t-windows-x64.exe`
+#### macOS
+
+- **Intel (x86_64)**: `shell-t-macos-x64`
+- **Apple Silicon (ARM64)**: `shell-t-macos-arm64`
+
+#### Linux
+
+- **GNU (x86_64)**: `shell-t-linux-x64-gnu`
+- **GNU (ARM64)**: `shell-t-linux-arm64-gnu`
+- **musl (x86_64)**: `shell-t-linux-x64-musl` *(static linking)*
+- **musl (ARM64)**: `shell-t-linux-arm64-musl` *(static linking)*
+
+#### Windows
+
+- **MSVC (x86_64)**: `shell-t-windows-x64-msvc.exe`
+- **MSVC (ARM64)**: `shell-t-windows-arm64-msvc.exe`
+- **GNU (x86_64)**: `shell-t-windows-x64-gnu.exe`
 
 ```bash
 # Make executable and move to PATH (macOS/Linux)
-chmod +x shell-t-macos-x64  # or shell-t-linux-x64
+chmod +x shell-t-macos-x64  # or shell-t-linux-x64-gnu, etc.
 sudo mv shell-t-macos-x64 /usr/local/bin/shell-t
+
+# Windows: Just run the .exe file
+shell-t-windows-x64-msvc.exe
 ```
 
 ### Option 2: Build from Source
@@ -67,11 +84,22 @@ To create a downloadable release:
 
 ### Release Assets
 
-Each release includes:
+Each release includes binaries for multiple platforms and architectures:
 
-- `shell-t-macos-x64` - macOS Intel binary
-- `shell-t-linux-x64` - Linux x64 binary
-- `shell-t-windows-x64.exe` - Windows x64 executable
+**macOS:**
+- `shell-t-macos-x64` - Intel (x86_64)
+- `shell-t-macos-arm64` - Apple Silicon (ARM64)
+
+**Linux:**
+- `shell-t-linux-x64-gnu` - GNU libc (x86_64)
+- `shell-t-linux-arm64-gnu` - GNU libc (ARM64)
+- `shell-t-linux-x64-musl` - musl libc (x86_64, static)
+- `shell-t-linux-arm64-musl` - musl libc (ARM64, static)
+
+**Windows:**
+- `shell-t-windows-x64-msvc.exe` - MSVC (x86_64)
+- `shell-t-windows-arm64-msvc.exe` - MSVC (ARM64)
+- `shell-t-windows-x64-gnu.exe` - GNU (x86_64)
 
 ## Usage
 
